@@ -14,7 +14,6 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   static const int totalSeats = 30;
-  static const String validQr = "LIBRARY-ENTRY";
 
   // Real-time stream — no manual loadSeatCount needed
   final Stream<QuerySnapshot> _seatStream = FirebaseFirestore.instance
@@ -24,20 +23,6 @@ class _LibraryPageState extends State<LibraryPage> {
 
   // ── QR scan entry point ───────────────────────────────────────────────────
   Future<void> processScan(String rawScanned) async {
-    final scanned = rawScanned.trim();
-
-    if (scanned.startsWith("ATTENDANCE:")) {
-      await handleAttendanceScan(scanned);
-      return;
-    }
-
-    if (scanned != validQr) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Invalid QR: \"$scanned\"")));
-      return;
-    }
-
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -93,59 +78,6 @@ class _LibraryPageState extends State<LibraryPage> {
           studentData: studentDoc.data(),
         ),
       ),
-    );
-  }
-
-  Future<void> handleAttendanceScan(String scanned) async {
-    final parts = scanned.split(":");
-    if (parts.length < 5) return;
-
-    final facultyUid = parts[1];
-    final date = parts[4];
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final studentDoc = await FirebaseFirestore.instance
-        .collection("students")
-        .doc(user.uid)
-        .get();
-
-    if (!studentDoc.exists) return;
-    final studentData = studentDoc.data()!;
-
-    final existing = await FirebaseFirestore.instance
-        .collection("attendance")
-        .where("studentUid", isEqualTo: user.uid)
-        .where("facultyUid", isEqualTo: facultyUid)
-        .where("date", isEqualTo: date)
-        .get();
-
-    if (existing.docs.isNotEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Attendance already marked for today!")),
-      );
-      return;
-    }
-
-    await FirebaseFirestore.instance.collection("attendance").add({
-      "studentUid": user.uid,
-      "studentName": studentData["name"],
-      "studentId": studentData["studentId"],
-      "department": studentData["department"],
-      "semester": studentData["semester"],
-      "facultyUid": facultyUid,
-      "subject": "GENERAL",
-      "present": true,
-      "date": date,
-      "timestamp": FieldValue.serverTimestamp(),
-    });
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Attendance marked successfully!")),
     );
   }
 
