@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'qr_scanner_page.dart';
-import 'library_session_page.dart';
+import 'library_seat_map_page.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -13,62 +13,34 @@ class LibraryPage extends StatefulWidget {
 
 class _LibraryPageState extends State<LibraryPage> {
   static const int totalSeats = 30;
-  int occupiedSeats = 0;
-  bool loading = true;
-
   static const String validQr = "LIBRARY-ENTRY";
 
-  @override
-  void initState() {
-    super.initState();
-    loadSeatCount();
-  }
+  // Real-time stream — no manual loadSeatCount needed
+  final Stream<QuerySnapshot> _seatStream = FirebaseFirestore.instance
+      .collection("library_logs")
+      .where("status", isEqualTo: "checked_in")
+      .snapshots();
 
-  Future<void> loadSeatCount() async {
-    // Count library_logs with status "checked_in" (not checked_out)
-    final query = await FirebaseFirestore.instance
-        .collection("library_logs")
-        .where("status", isEqualTo: "checked_in")
-        .get();
+  // ── QR scan entry point ───────────────────────────────────────────────────
+  Future<void> processScan(String rawScanned) async {
+    final scanned = rawScanned.trim();
 
-    if (mounted) {
-      setState(() {
-        occupiedSeats = query.docs.length;
-        loading = false;
-      });
-    }
-  }
-
-  int get availableSeats => (totalSeats - occupiedSeats).clamp(0, totalSeats);
-
-  // 🔥 PROCESS A SCANNED QR CODE
-  Future<void> processScan(String scanned) async {
-    // 1. Check for Attendance QR
     if (scanned.startsWith("ATTENDANCE:")) {
       await handleAttendanceScan(scanned);
       return;
     }
 
-    // 2. Check for Library Entry QR
     if (scanned != validQr) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid QR Code")),
-      );
-      return;
-    }
-
-    // Check seat availability
-    if (availableSeats <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No seats available! Library is full.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Invalid QR: \"$scanned\"")));
       return;
     }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Check if student already checked in
+    // Check already checked in
     final existingCheckin = await FirebaseFirestore.instance
         .collection("library_logs")
         .where("uid", isEqualTo: user.uid)
@@ -77,23 +49,22 @@ class _LibraryPageState extends State<LibraryPage> {
 
     if (existingCheckin.docs.isNotEmpty) {
       if (!mounted) return;
+      final logData = existingCheckin.docs.first.data();
+      final existingSeat = logData["seatNumber"] ?? 1;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You are already checked in!")),
+        SnackBar(content: Text("Already checked in — Seat $existingSeat")),
       );
-      // Go to session page with existing log
       final logId = existingCheckin.docs.first.id;
-      final checkedOut = await Navigator.push(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => LibrarySessionPage(logId: logId),
+          builder: (_) => LibrarySeatMapPage(existingLogId: logId),
         ),
       );
-      if (checkedOut == true) {
-        loadSeatCount();
-      }
       return;
     }
 
+    // Fetch student data
     final studentDoc = await FirebaseFirestore.instance
         .collection("students")
         .doc(user.uid)
@@ -101,73 +72,36 @@ class _LibraryPageState extends State<LibraryPage> {
 
     if (!studentDoc.exists) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Student record not found")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Student record not found")));
       return;
     }
 
-    final studentData = studentDoc.data()!;
-    final now = DateTime.now();
-
-    // Create library log entry
-    final logRef = await FirebaseFirestore.instance.collection("library_logs").add({
-      "uid": user.uid,
-      "name": studentData["name"],
-      "studentId": studentData["studentId"],
-      "department": studentData["department"],
-      "semester": studentData["semester"],
-      "timestamp": FieldValue.serverTimestamp(),
-      "date": "${now.year}-${now.month}-${now.day}",
-      "time": "${now.hour}:${now.minute}:${now.second}",
-      "status": "checked_in",
-    });
-
-    // Save student details to the scanned_students table
-    await FirebaseFirestore.instance.collection("scanned_students").add({
-      "uid": user.uid,
-      "name": studentData["name"],
-      "studentId": studentData["studentId"],
-      "department": studentData["department"],
-      "semester": studentData["semester"],
-      "scannedAt": FieldValue.serverTimestamp(),
-      "date": "${now.year}-${now.month}-${now.day}",
-    });
-
-    // Update occupied count
-    setState(() {
-      occupiedSeats++;
-    });
-
     if (!mounted) return;
 
-    // Navigate to session/timer page
-    final checkedOut = await Navigator.push(
+    // Navigate to seat selection — log creation happens after seat is picked
+    Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => LibrarySessionPage(logId: logRef.id),
+        builder: (_) => LibrarySeatMapPage(
+          studentUid: user.uid,
+          studentData: studentDoc.data(),
+        ),
       ),
     );
-
-    if (checkedOut == true) {
-      loadSeatCount(); // refresh seat count after checkout
-    }
   }
 
   Future<void> handleAttendanceScan(String scanned) async {
-    // Format: ATTENDANCE:facultyUid:subject:semester:date
     final parts = scanned.split(":");
     if (parts.length < 5) return;
 
     final facultyUid = parts[1];
-    final subject = parts[2];
-    final semester = parts[3];
     final date = parts[4];
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Get student details
     final studentDoc = await FirebaseFirestore.instance
         .collection("students")
         .doc(user.uid)
@@ -176,31 +110,10 @@ class _LibraryPageState extends State<LibraryPage> {
     if (!studentDoc.exists) return;
     final studentData = studentDoc.data()!;
 
-    // 1. Verify Semester matches
-    if (studentData["semester"] != semester) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Mismatch: This QR is for Semester $semester")),
-      );
-      return;
-    }
-
-    // 2. Verify student has this subject
-    final subjects = List<String>.from(studentData["subjects"] ?? []);
-    if (!subjects.contains(subject)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: You are not registered for $subject")),
-      );
-      return;
-    }
-
-    // 3. Mark Attendance
-    // Check if already marked for this subject and date
     final existing = await FirebaseFirestore.instance
         .collection("attendance")
         .where("studentUid", isEqualTo: user.uid)
-        .where("subject", isEqualTo: subject)
+        .where("facultyUid", isEqualTo: facultyUid)
         .where("date", isEqualTo: date)
         .get();
 
@@ -216,37 +129,23 @@ class _LibraryPageState extends State<LibraryPage> {
       "studentUid": user.uid,
       "studentName": studentData["name"],
       "studentId": studentData["studentId"],
+      "department": studentData["department"],
+      "semester": studentData["semester"],
       "facultyUid": facultyUid,
-      "subject": subject,
-      "semester": semester,
+      "subject": "GENERAL",
       "present": true,
       "date": date,
       "timestamp": FieldValue.serverTimestamp(),
     });
 
     if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Attendance Marked!",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text("Present for $subject", textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Great!"),
-          ),
-        ],
+
+    // Navigate to seat map after successful attendance marking
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            LibrarySeatMapPage(studentUid: user.uid, studentData: studentData),
       ),
     );
   }
@@ -255,20 +154,32 @@ class _LibraryPageState extends State<LibraryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F1EB),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  header(),
-                  const SizedBox(height: 20),
-                  qrCard(),
-                  const SizedBox(height: 20),
-                  seatInfoCard(),
-                  const SizedBox(height: 40),
-                ],
-              ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _seatStream,
+        builder: (context, snapshot) {
+          final occupiedSeats = snapshot.hasData
+              ? snapshot.data!.docs.length
+              : 0;
+          final availableSeats = (totalSeats - occupiedSeats).clamp(
+            0,
+            totalSeats,
+          );
+          final isFull = availableSeats <= 0;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                header(),
+                const SizedBox(height: 20),
+                qrCard(isFull),
+                const SizedBox(height: 20),
+                seatInfoCard(occupiedSeats, availableSeats),
+                const SizedBox(height: 40),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 
@@ -303,9 +214,7 @@ class _LibraryPageState extends State<LibraryPage> {
     );
   }
 
-  Widget qrCard() {
-    final isFull = availableSeats <= 0;
-
+  Widget qrCard(bool isFull) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(25),
@@ -334,7 +243,7 @@ class _LibraryPageState extends State<LibraryPage> {
           Text(
             isFull
                 ? "All $totalSeats seats are currently occupied. Please try again later."
-                : "Scan the QR code at the library entrance to mark attendance",
+                : "Scan the QR code at the library entrance to check in",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isFull ? Colors.red.shade300 : Colors.black54,
@@ -349,7 +258,6 @@ class _LibraryPageState extends State<LibraryPage> {
                       context,
                       MaterialPageRoute(builder: (_) => const QRScannerPage()),
                     );
-
                     if (scanned != null) {
                       await processScan(scanned);
                     }
@@ -372,13 +280,13 @@ class _LibraryPageState extends State<LibraryPage> {
     );
   }
 
-  Widget seatInfoCard() {
-    final percentage = occupiedSeats / totalSeats;
+  Widget seatInfoCard(int occupiedSeats, int availableSeats) {
+    final percentage = totalSeats > 0 ? occupiedSeats / totalSeats : 0.0;
     final color = percentage >= 1.0
         ? Colors.red
         : percentage >= 0.7
-            ? Colors.orange
-            : Colors.green;
+        ? Colors.orange
+        : Colors.green;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -406,7 +314,6 @@ class _LibraryPageState extends State<LibraryPage> {
             ],
           ),
           const SizedBox(height: 12),
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
@@ -426,7 +333,11 @@ class _LibraryPageState extends State<LibraryPage> {
               ),
               Text(
                 "$availableSeats free",
-                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

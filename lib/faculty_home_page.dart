@@ -205,7 +205,7 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
     final facultyUid = FirebaseAuth.instance.currentUser!.uid;
     final subject = faculty?["subject"] ?? "N/A";
     final semester = faculty?["semester"] ?? "1";
-    final qrData = "ATTENDANCE:$facultyUid:$subject:$semester:$dateStr";
+    final qrData = "ATTENDANCE:$facultyUid:GENERAL:ALL:$dateStr";
 
     return Container(
       width: double.infinity,
@@ -246,7 +246,7 @@ class _FacultyHomePageState extends State<FacultyHomePage> {
           ),
           const SizedBox(height: 5),
           Text(
-            "$subject • Semester $semester • $dateStr",
+            "General Attendance • All Semesters • $dateStr",
             style: const TextStyle(color: Colors.black38, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),

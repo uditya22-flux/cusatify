@@ -4,8 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LibrarySessionPage extends StatefulWidget {
   final String logId; // the library_logs document ID for this check-in
+  final int seatNumber;
 
-  const LibrarySessionPage({super.key, required this.logId});
+  const LibrarySessionPage({super.key, required this.logId, required this.seatNumber});
 
   @override
   State<LibrarySessionPage> createState() => _LibrarySessionPageState();
@@ -113,14 +114,34 @@ class _LibrarySessionPageState extends State<LibrarySessionPage> {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green.shade600, size: 32),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      "You are checked in to the library!",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "You are checked in to the library!",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.chair_alt, color: Colors.green.shade600, size: 16),
+                            const SizedBox(width: 5),
+                            Text(
+                              "Seat ${widget.seatNumber}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],

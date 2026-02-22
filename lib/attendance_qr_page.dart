@@ -21,7 +21,7 @@ class AttendanceQRPage extends StatelessWidget {
     final now = DateTime.now();
     final dateStr = DateFormat('yyyy-MM-dd').format(now);
     // Unique data format for attendance scanning
-    final qrData = "ATTENDANCE:$facultyUid:$subject:$semester:$dateStr";
+    final qrData = "ATTENDANCE:$facultyUid:GENERAL:ALL:$dateStr";
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7EB),
@@ -56,12 +56,12 @@ class AttendanceQRPage extends StatelessWidget {
               ),
               const SizedBox(height: 25),
               Text(
-                subject,
+                "General Attendance",
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF5D1F1E)),
               ),
               Text(
-                "Semester $semester • $facultyName",
+                "All Semesters • $facultyName",
                 style: const TextStyle(fontSize: 16, color: Colors.black45, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 40),
