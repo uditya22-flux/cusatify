@@ -1,11 +1,11 @@
-# CUSAT Smart Campus  
+# CUSATIFY
 ### Digital Library Seat Management System
 
 ---
 
 ##  Project Overview
 
-CUSAT Smart Campus is a Flutter-based mobile application designed to optimize library seat management at Cochin University of Science and Technology (CUSAT).
+CUSATIFY is a Flutter-based mobile application designed to optimize library seat management at Cochin University of Science and Technology (CUSAT).
 
 The application enables students to scan a QR code inside the library, reserve available seats, and automatically start a timed session. Once the session expires, the system automatically checks out the student and releases the seat.
 
