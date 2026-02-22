@@ -3,7 +3,7 @@
 
 ---
 
-## 📌 Project Overview
+##  Project Overview
 
 CUSAT Smart Campus is a Flutter-based mobile application designed to optimize library seat management at Cochin University of Science and Technology (CUSAT).
 
@@ -13,7 +13,7 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ---
 
-## 🎯 Objectives
+##  Objectives
 
 - Ensure fair and transparent seat allocation  
 - Prevent long-duration seat blocking  
@@ -23,9 +23,9 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ---
 
-## 👥 User Roles
+##  User Roles
 
-### 🎓 Student
+###  Student
 - Secure login authentication  
 - Access personalized dashboard  
 - Scan QR code inside library  
@@ -34,14 +34,14 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 - Automatic timer activation  
 - Auto checkout when timer expires  
 
-### 👨‍🏫 Faculty
+###  Faculty
 - Secure login  
 - Access faculty dashboard  
 - Future scope: Monitoring and administrative controls  
 
 ---
 
-## ✨ Core Features
+##  Core Features
 
 - Role-based authentication (Student / Faculty)
 - QR code–based library verification
@@ -52,7 +52,7 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ---
 
-## ⚙️ System Workflow
+##  System Workflow
 
 1. User logs into the application  
 2. Navigates to the Library section  
@@ -66,7 +66,7 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 ### Frontend
 - Flutter  
@@ -83,5 +83,5 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
