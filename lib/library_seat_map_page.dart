@@ -29,6 +29,50 @@ class _LibrarySeatMapPageState extends State<LibrarySeatMapPage> {
 
   bool get isSelectionMode => widget.studentUid != null && widget.studentData != null;
 
+  @override
+  void initState() {
+    super.initState();
+    // If already checked in, go straight to the session page
+    if (widget.existingLogId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _resumeExistingSession();
+      });
+    }
+  }
+
+  Future<void> _resumeExistingSession() async {
+    final logDoc = await FirebaseFirestore.instance
+        .collection("library_logs")
+        .doc(widget.existingLogId)
+        .get();
+
+    if (!mounted) return;
+
+    if (!logDoc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Session not found")),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
+    final data = logDoc.data()!;
+    final seatNumber = data["seatNumber"] ?? 1;
+
+    final checkedOut = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LibrarySessionPage(
+          logId: widget.existingLogId!,
+          seatNumber: seatNumber,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context, checkedOut == true);
+  }
+
   // ── Confirm & Check In ──────────────────────────────────────────────────────
   Future<void> _confirmSeat(int seatIndex, Set<int> occupiedIndexes) async {
     if (occupiedIndexes.contains(seatIndex)) return;

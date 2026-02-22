@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'qr_scanner_page.dart';
 import 'library_seat_map_page.dart';
+import 'library_session_page.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -51,14 +52,17 @@ class _LibraryPageState extends State<LibraryPage> {
       if (!mounted) return;
       final logData = existingCheckin.docs.first.data();
       final existingSeat = logData["seatNumber"] ?? 1;
+      final logId = existingCheckin.docs.first.id;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Already checked in — Seat $existingSeat")),
       );
-      final logId = existingCheckin.docs.first.id;
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => LibrarySeatMapPage(existingLogId: logId),
+          builder: (_) => LibrarySessionPage(
+            logId: logId,
+            seatNumber: existingSeat,
+          ),
         ),
       );
       return;
@@ -140,13 +144,8 @@ class _LibraryPageState extends State<LibraryPage> {
 
     if (!mounted) return;
 
-    // Navigate to seat map after successful attendance marking
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            LibrarySeatMapPage(studentUid: user.uid, studentData: studentData),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Attendance marked successfully!")),
     );
   }
 
