@@ -81,6 +81,11 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 - QR Code Scanner Package  
 - Session & Timer Management Logic  
 
+<img width="400" height="1280" alt="CUSATIFY (1)" src="https://github.com/user-attachments/assets/589082ec-5685-40cb-ab30-93c7b7fad952" />
+
+
+
+
 ---
 
 ##  Project Structure
