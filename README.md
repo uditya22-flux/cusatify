@@ -90,8 +90,10 @@ This ensures fair usage, prevents seat blocking, and improves overall resource e
 
 ##  Project Structure
 
-<img width="200" height="500" alt="CUSATIFY (1)" src="https://github.com/user-attachments/assets/638e6918-5e0a-4644-9874-c43bc56261ec" />
-<img width="200" height="500" alt="CUSATIFY (2)" src="https://github.com/user-attachments/assets/3d165dab-78ee-45a0-991a-f7caf95de59e" />
+
+
+
+
 
 
 
